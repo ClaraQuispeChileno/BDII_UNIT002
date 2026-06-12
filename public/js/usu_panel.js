@@ -1,0 +1,254 @@
+// Sesión verificada a nivel de página HTML
+
+
+const SUPABASE_URL = 'https://xoohircyfzeodoqlgkyy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhvb2hpcmN5Znplb2RvcWxna3l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjI2MDYsImV4cCI6MjA5NjE5ODYwNn0.uO3DKRrsXoLJekxIvr_sBTaZ1PKQctKZiqhpsD2NdnE';
+let supabaseClient;
+try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} catch (e) {
+    console.error("Error al inicializar Supabase en Panel:", e);
+    supabaseClient = {
+        from: () => ({
+            select: () => ({
+                eq: () => Promise.resolve({ data: [], error: null })
+            })
+        })
+    };
+}
+const userId = sessionStorage.getItem('ds_user') || 'demo_user';
+let chartInstance = null;
+
+const isUuid = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+const timeoutPromise = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms));
+
+async function cargarDocumentos() {
+    if (!isUuid(userId)) {
+        console.warn("userId no es un UUID válido. Usando datos vacíos para activar simulación.");
+        return [];
+    }
+    try {
+        const fetchPromise = supabaseClient.from('documentos').select('*').eq('usuario_id', userId);
+        const result = await Promise.race([
+            fetchPromise,
+            timeoutPromise(5000)
+        ]);
+        if (result.error) {
+            console.error(result.error);
+            return [];
+        }
+        return result.data || [];
+    } catch (e) {
+        console.warn("Carga de Supabase excedió el tiempo límite (5s) o falló, usando datos vacíos para activar simulación.");
+        return [];
+    }
+}
+
+async function cargarCompartidosCount() {
+    if (!isUuid(userId)) return 0;
+    try {
+        const { count, error } = await supabaseClient
+            .from('compartidos')
+            .select('*', { count: 'exact', head: true })
+            .eq('usuario_compartido_id', userId);
+        if (error) {
+            console.error('Error cargando compartidos:', error);
+            return 0;
+        }
+        return count || 0;
+    } catch (e) {
+        console.error('Error en cargarCompartidosCount:', e);
+        return 0;
+    }
+}
+
+async function actualizarDashboard() {
+    let docs = [];
+    let compartidosCount = 0;
+    try {
+        docs = await cargarDocumentos();
+        compartidosCount = await cargarCompartidosCount();
+    } catch (e) {
+        console.error("Error cargando datos del dashboard:", e);
+    }
+    const total = docs ? docs.length : 0;
+    let antiguedad = 0;
+    try {
+        if (total > 0) {
+            const fechas = docs.map(d => d.created_at ? new Date(d.created_at) : new Date());
+            const masAntiguo = new Date(Math.min(...fechas));
+            antiguedad = Math.floor((new Date() - masAntiguo) / (86400000));
+        }
+    } catch (e) {
+        console.error("Error calculando antigüedad:", e);
+    }
+    try {
+        document.getElementById('totalDocs').innerText = total;
+        document.getElementById('antiguedad').innerText = antiguedad;
+        const compartidosEl = document.getElementById('totalCompartidos');
+        if (compartidosEl) {
+            compartidosEl.innerText = compartidosCount;
+        }
+    } catch (e) {
+        console.error("Error actualizando elementos DOM:", e);
+    }
+
+    let labels = [];
+    let dataPoints = [];
+
+    // Generar etiquetas de los últimos 7 días para un gráfico de actividad diaria real
+    const hoy = new Date();
+    const ultimosDias = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i);
+        const dia = String(d.getDate()).padStart(2, '0');
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        ultimosDias.push({
+            dateStr: `${dia}/${mes}`,
+            dateKey: `${d.getFullYear()}-${mes}-${dia}`,
+            count: 0,
+            docs: []
+        });
+    }
+
+    if (total > 0) {
+        docs.forEach(doc => {
+            if (!doc.created_at) return;
+            const fechaDoc = new Date(doc.created_at);
+            const dia = String(fechaDoc.getDate()).padStart(2, '0');
+            const mes = String(fechaDoc.getMonth() + 1).padStart(2, '0');
+            const key = `${fechaDoc.getFullYear()}-${mes}-${dia}`;
+            
+            const diaMatch = ultimosDias.find(d => d.dateKey === key);
+            if (diaMatch) {
+                diaMatch.count++;
+                diaMatch.docs.push(doc.nombre || 'Sin nombre');
+            }
+        });
+
+        labels = ultimosDias.map(d => d.dateStr);
+        dataPoints = ultimosDias.map(d => d.count);
+    } else {
+        // Fallback si no hay ningún documento
+        labels = ultimosDias.map(d => d.dateStr);
+        dataPoints = ultimosDias.map(() => 0);
+    }
+
+    try {
+        const ctx = document.getElementById('actividadChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        const isStellar = document.body.classList.contains('theme-space');
+        const borderColor = isStellar ? '#22d3ee' : '#a78bfa';
+        const pointColor = isStellar ? '#e879f9' : '#a78bfa';
+        const gridColor = isStellar ? 'rgba(34, 211, 238, 0.08)' : 'rgba(255, 255, 255, 0.05)';
+        const pointBorderColor = isStellar ? '#060913' : '#0a0e1a';
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        if (isStellar) {
+            gradient.addColorStop(0, 'rgba(34, 211, 238, 0.45)');
+            gradient.addColorStop(0.5, 'rgba(167, 139, 250, 0.15)');
+            gradient.addColorStop(1, 'rgba(6, 9, 19, 0.0)');
+        } else {
+            gradient.addColorStop(0, 'rgba(167, 139, 250, 0.35)');
+            gradient.addColorStop(1, 'rgba(94, 106, 210, 0.0)');
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Documentos Creados',
+                    data: dataPoints,
+                    borderColor: borderColor,
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: pointColor,
+                    pointBorderColor: pointBorderColor,
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#cbd5e1',
+                            font: { family: 'Outfit' }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const count = context.raw;
+                                const dayDocs = ultimosDias[index]?.docs || [];
+                                if (count === 0) {
+                                    return 'Sin documentos creados';
+                                }
+                                let label = `${count} ${count === 1 ? 'documento' : 'documentos'}:`;
+                                return [label].concat(dayDocs.map(name => ` • ${name}`));
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Cantidad de documentos',
+                            color: '#cbd5e1',
+                            font: { family: 'Outfit', size: 12 }
+                        },
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: {
+                            color: '#9ca3af',
+                            font: { family: 'Outfit' },
+                            stepSize: 1,
+                            precision: 0
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#9ca3af', font: { family: 'Outfit' } }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error("Error al renderizar Chart.js:", e);
+    }
+    const msgDiv = document.getElementById('mensajeInfo');
+    if (msgDiv) {
+        if (total === 0) { msgDiv.style.display = 'block'; msgDiv.innerText = '⚠️ No hay documentos. Genera uno desde "Generar documento".'; }
+        else { msgDiv.style.display = 'none'; }
+    }
+}
+
+document.getElementById('verGuardadosLink')?.addEventListener('click', () => window.location.href = 'usu_guardados.html');
+document.getElementById('verCompartidosLink')?.addEventListener('click', () => window.location.href = 'usu_compartidos.html');
+document.getElementById('verCompartidosLink2')?.addEventListener('click', () => window.location.href = 'usu_compartidos.html');
+document.getElementById('verAntiguedadLink')?.addEventListener('click', () => window.location.href = 'usu_guardados.html');
+document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    try {
+        await supabaseClient.auth.signOut();
+    } catch (err) {
+        console.error('Error signing out:', err);
+    }
+    sessionStorage.clear();
+    window.location.href = '/';
+});
+
+window.addEventListener('stellarThemeChanged', () => {
+    actualizarDashboard();
+});
+
+actualizarDashboard();
