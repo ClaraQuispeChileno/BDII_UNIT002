@@ -354,11 +354,30 @@ function showLoading(show, type = 'ai') {
         btnText.textContent = message;
         spinner.style.display = 'inline-block';
         btn.disabled = true;
+
+        Swal.fire({
+            title: type === 'python' ? 'Analizando con Python...' : 'Analizando con IA...',
+            text: type === 'python' ? 'Procesando el esquema técnico. Por favor, espera.' : 'Generando explicaciones semánticas y auditoría de anomalías con IA.',
+            allowOutsideClick: false,
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html'
+            },
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
     } else {
         const originalText = type === 'python' ? 'Análisis Python' : 'Análisis con IA';
         btnText.textContent = originalText;
         spinner.style.display = 'none';
         btn.disabled = false;
+
+        if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+            Swal.close();
+        }
     }
 }
 
@@ -768,6 +787,9 @@ function switchTab(event) {
 
 // Manejo de errores
 function showError(message) {
+    if (typeof Swal !== 'undefined') {
+        Swal.close();
+    }
     errorMessage.textContent = message;
     errorSection.style.display = 'block';
     hideResults();
@@ -2006,6 +2028,21 @@ async function saveDocumentToSupabase() {
     saveBtn.disabled = true;
     saveBtn.innerHTML = '⚡ Subiendo PDF a Storage...';
 
+    Swal.fire({
+        title: 'Guardando en Supabase...',
+        text: 'Generando PDF y subiendo archivos. Por favor, espera.',
+        allowOutsideClick: false,
+        background: 'transparent',
+        customClass: {
+            popup: 'glass-swal-popup',
+            title: 'glass-swal-title',
+            htmlContainer: 'glass-swal-html'
+        },
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     try {
         // Generar PDF como Blob
         let pdfUrl = '';
@@ -2296,6 +2333,21 @@ async function generateTestData() {
     quickBtn.disabled = true;
     quickBtn.innerHTML = 'Generando...';
 
+    Swal.fire({
+        title: 'Generando datos de prueba...',
+        text: 'Construyendo sentencias SQL coherentes de inserción. Por favor, espera.',
+        allowOutsideClick: false,
+        background: 'transparent',
+        customClass: {
+            popup: 'glass-swal-popup',
+            title: 'glass-swal-title',
+            htmlContainer: 'glass-swal-html'
+        },
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     try {
         const userId = sessionStorage.getItem('ds_user') || '';
         const userEmail = sessionStorage.getItem('ds_email') || '';
@@ -2312,6 +2364,7 @@ async function generateTestData() {
         const result = await response.json();
 
         if (response.ok && result.sqlScript) {
+            Swal.close();
             lastGeneratedScript = result.sqlScript;
             codeEl.textContent = result.sqlScript;
             preview.style.display = 'block';
@@ -2721,17 +2774,56 @@ async function demoInstantUpgrade() {
         
         if (response.ok) {
             sessionStorage.setItem('ds_role', 'premium');
-            alert("¡Felicidades! Tu cuenta ha sido actualizada a Premium (Bypass Demo). Recargaremos la página para aplicar los cambios.");
+            await Swal.fire({
+                title: '¡Felicidades!',
+                text: 'Tu cuenta ha sido actualizada a Premium (Bypass Demo). Recargaremos la página para aplicar los cambios.',
+                icon: 'success',
+                background: 'transparent',
+                customClass: {
+                    popup: 'glass-swal-popup',
+                    title: 'glass-swal-title',
+                    htmlContainer: 'glass-swal-html',
+                    confirmButton: 'glass-swal-confirm'
+                },
+                buttonsStyling: false,
+                confirmButtonText: 'Aceptar'
+            });
             window.location.reload();
         } else {
             // Si la llamada falla porque no somos admins, lo cambiamos en local storage y recargamos para simulación
             sessionStorage.setItem('ds_role', 'premium');
-            alert("¡Felicidades! Rol Premium activado localmente en sesión. Recargaremos la página.");
+            await Swal.fire({
+                title: '¡Felicidades!',
+                text: 'Rol Premium activado localmente en sesión. Recargaremos la página.',
+                icon: 'success',
+                background: 'transparent',
+                customClass: {
+                    popup: 'glass-swal-popup',
+                    title: 'glass-swal-title',
+                    htmlContainer: 'glass-swal-html',
+                    confirmButton: 'glass-swal-confirm'
+                },
+                buttonsStyling: false,
+                confirmButtonText: 'Aceptar'
+            });
             window.location.reload();
         }
     } catch (err) {
         sessionStorage.setItem('ds_role', 'premium');
-        alert("¡Felicidades! Rol Premium activado localmente en sesión. Recargaremos la página.");
+        await Swal.fire({
+            title: '¡Felicidades!',
+            text: 'Rol Premium activado localmente en sesión. Recargaremos la página.',
+            icon: 'success',
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html',
+                confirmButton: 'glass-swal-confirm'
+            },
+            buttonsStyling: false,
+            confirmButtonText: 'Aceptar'
+        });
         window.location.reload();
     }
 }

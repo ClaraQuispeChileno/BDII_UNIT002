@@ -56,6 +56,21 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Por favor ingresa correo y contraseña');
             return;
         }
+        Swal.fire({
+            title: 'Iniciando sesión...',
+            text: 'Validando credenciales. Por favor espera.',
+            allowOutsideClick: false,
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html'
+            },
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         try {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
@@ -115,6 +130,21 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Las contraseñas no coinciden');
             return;
         }
+
+        Swal.fire({
+            title: 'Creando cuenta...',
+            text: 'Registrando tu usuario en el sistema. Por favor espera.',
+            allowOutsideClick: false,
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html'
+            },
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         try {
             // Registrar en Supabase Auth

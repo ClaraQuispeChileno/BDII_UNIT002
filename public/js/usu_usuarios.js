@@ -298,6 +298,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = uId ? `/api/admin/users/${uId}` : '/api/admin/users';
         const method = uId ? 'PUT' : 'POST';
 
+        Swal.fire({
+            title: uId ? 'Actualizando usuario...' : 'Creando usuario...',
+            allowOutsideClick: false,
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title'
+            },
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         try {
             const response = await fetch(url, {
                 method,
@@ -324,9 +337,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Eliminar Usuario
     async function deleteUser(id, userName) {
-        if (!confirm(`¿Está seguro de que desea eliminar permanentemente a ${userName}? Esta acción no se puede deshacer y borrará todos sus documentos.`)) {
-            return;
-        }
+        const result = await Swal.fire({
+            title: '¿Eliminar usuario?',
+            text: `¿Está seguro de que desea eliminar permanentemente a ${userName}? Esta acción no se puede deshacer y borrará todos sus documentos.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html',
+                confirmButton: 'glass-swal-confirm',
+                cancelButton: 'glass-swal-cancel',
+                icon: 'glass-swal-icon'
+            },
+            buttonsStyling: false
+        });
+
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Eliminando usuario...',
+            allowOutsideClick: false,
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title'
+            },
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         try {
             const response = await fetch(`/api/admin/users/${id}`, {
@@ -336,12 +379,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            const result = await response.json();
-            if (response.ok && result.success) {
+            const resultData = await response.json();
+            if (response.ok && resultData.success) {
                 alert('Usuario eliminado con éxito.');
                 loadUsers();
             } else {
-                alert('No se pudo eliminar el usuario: ' + (result.error || 'Error desconocido'));
+                alert('No se pudo eliminar el usuario: ' + (resultData.error || 'Error desconocido'));
             }
         } catch (err) {
             console.error('Error eliminando usuario:', err);

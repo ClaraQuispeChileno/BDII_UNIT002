@@ -349,6 +349,21 @@ async function abrirModalVisualizador(doc) {
             const btnActivo = verDespues ? btnVer : btnGuardar;
             if (btnActivo) btnActivo.innerText = '⚡ Regenerando PDF...';
 
+            Swal.fire({
+                title: 'Guardando cambios...',
+                text: 'Regenerando PDF y actualizando en Supabase. Por favor espera.',
+                allowOutsideClick: false,
+                background: 'transparent',
+                customClass: {
+                    popup: 'glass-swal-popup',
+                    title: 'glass-swal-title',
+                    htmlContainer: 'glass-swal-html'
+                },
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             try {
                 const pdfBlob = await generarPdfBlob(nuevoHtml);
 
@@ -538,21 +553,54 @@ async function moverAPapelera(id, nombre, acceso, contenido) {
         alert("Operación no permitida en modo de demostración.");
         return;
     }
-    await supabaseClient.from('papelera').insert([{ usuario_id: userId, nombre, acceso, fecha_eliminacion: new Date().toISOString(), contenido }]);
-    await supabaseClient.from('documentos').delete().eq('id', id);
+
+    Swal.fire({
+        title: 'Moviendo a la papelera...',
+        allowOutsideClick: false,
+        background: 'transparent',
+        customClass: {
+            popup: 'glass-swal-popup',
+            title: 'glass-swal-title'
+        },
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     try {
-        await fetch('/api/logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                usuarioId: userId,
-                usuarioEmail: sessionStorage.getItem('ds_email') || '',
-                accion: 'mover_papelera',
-                detalles: { nombreDocumento: nombre, documentoId: id }
-            })
+        await supabaseClient.from('papelera').insert([{ usuario_id: userId, nombre, acceso, fecha_eliminacion: new Date().toISOString(), contenido }]);
+        await supabaseClient.from('documentos').delete().eq('id', id);
+        try {
+            await fetch('/api/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    usuarioId: userId,
+                    usuarioEmail: sessionStorage.getItem('ds_email') || '',
+                    accion: 'mover_papelera',
+                    detalles: { nombreDocumento: nombre, documentoId: id }
+                })
+            });
+        } catch (logErr) {
+            console.error('Error registrando log de papelera:', logErr);
+        }
+
+        await Swal.fire({
+            title: '¡Documento eliminado!',
+            text: `"${nombre}" ha sido movido a la papelera con éxito.`,
+            icon: 'success',
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html',
+                confirmButton: 'glass-swal-confirm'
+            },
+            buttonsStyling: false,
+            confirmButtonText: 'Aceptar'
         });
-    } catch (logErr) {
-        console.error('Error registrando log de papelera:', logErr);
+    } catch (err) {
+        alert('Error al mover a papelera: ' + err.message);
     }
 }
 
@@ -561,38 +609,103 @@ async function restaurarDocumento(papId, nombre, acceso, contenido) {
         alert("Operación no permitida en modo de demostración.");
         return;
     }
-    await supabaseClient.from('documentos').insert([{ usuario_id: userId, nombre, acceso, fecha_mod: new Date().toISOString(), contenido }]);
-    await supabaseClient.from('papelera').delete().eq('id', papId);
+
+    Swal.fire({
+        title: 'Restaurando documento...',
+        allowOutsideClick: false,
+        background: 'transparent',
+        customClass: {
+            popup: 'glass-swal-popup',
+            title: 'glass-swal-title'
+        },
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     try {
-        await fetch('/api/logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                usuarioId: userId,
-                usuarioEmail: sessionStorage.getItem('ds_email') || '',
-                accion: 'restaurar_documento',
-                detalles: { nombreDocumento: nombre, documentoId: papId }
-            })
+        await supabaseClient.from('documentos').insert([{ usuario_id: userId, nombre, acceso, fecha_mod: new Date().toISOString(), contenido }]);
+        await supabaseClient.from('papelera').delete().eq('id', papId);
+        try {
+            await fetch('/api/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    usuarioId: userId,
+                    usuarioEmail: sessionStorage.getItem('ds_email') || '',
+                    accion: 'restaurar_documento',
+                    detalles: { nombreDocumento: nombre, documentoId: papId }
+                })
+            });
+        } catch (logErr) {
+            console.error('Error registrando log de restaurar:', logErr);
+        }
+
+        await Swal.fire({
+            title: '¡Restaurado con éxito!',
+            text: `El documento "${nombre}" ha sido restaurado a tus documentos activos.`,
+            icon: 'success',
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html',
+                confirmButton: 'glass-swal-confirm'
+            },
+            buttonsStyling: false,
+            confirmButtonText: 'Aceptar'
         });
-    } catch (logErr) {
-        console.error('Error registrando log de restaurar:', logErr);
+    } catch (err) {
+        alert('Error al restaurar documento: ' + err.message);
     }
 }
 async function eliminarPermanente(papId) { 
-    await supabaseClient.from('papelera').delete().eq('id', papId); 
+    Swal.fire({
+        title: 'Eliminando permanentemente...',
+        allowOutsideClick: false,
+        background: 'transparent',
+        customClass: {
+            popup: 'glass-swal-popup',
+            title: 'glass-swal-title'
+        },
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
     try {
-        await fetch('/api/logs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                usuarioId: userId,
-                usuarioEmail: sessionStorage.getItem('ds_email') || '',
-                accion: 'eliminar_definitivo',
-                detalles: { documentoId: papId }
-            })
+        await supabaseClient.from('papelera').delete().eq('id', papId); 
+        try {
+            await fetch('/api/logs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    usuarioId: userId,
+                    usuarioEmail: sessionStorage.getItem('ds_email') || '',
+                    accion: 'eliminar_definitivo',
+                    detalles: { documentoId: papId }
+                })
+            });
+        } catch (logErr) {
+            console.error('Error registrando log de eliminar definitivo:', logErr);
+        }
+
+        await Swal.fire({
+            title: '¡Eliminado!',
+            text: 'El documento ha sido eliminado de forma permanente.',
+            icon: 'success',
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html',
+                confirmButton: 'glass-swal-confirm'
+            },
+            buttonsStyling: false,
+            confirmButtonText: 'Aceptar'
         });
-    } catch (logErr) {
-        console.error('Error registrando log de eliminar definitivo:', logErr);
+    } catch (err) {
+        alert('Error al eliminar permanentemente: ' + err.message);
     }
 }
 async function limpiarPapelera() {
@@ -745,7 +858,25 @@ async function renderDocumentosActivos() {
                     mostrarModalCompartir(doc);
                     break;
                 case 'delete':
-                    if (confirm(`¿Mover "${doc.nombre}" a la papelera?`)) {
+                    const confirmMove = await Swal.fire({
+                        title: '¿Mover a la papelera?',
+                        text: `¿Mover "${doc.nombre}" a la papelera?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, mover',
+                        cancelButtonText: 'Cancelar',
+                        background: 'transparent',
+                        customClass: {
+                            popup: 'glass-swal-popup',
+                            title: 'glass-swal-title',
+                            htmlContainer: 'glass-swal-html',
+                            confirmButton: 'glass-swal-confirm',
+                            cancelButton: 'glass-swal-cancel',
+                            icon: 'glass-swal-icon'
+                        },
+                        buttonsStyling: false
+                    });
+                    if (confirmMove.isConfirmed) {
                         await moverAPapelera(doc.id, doc.nombre, doc.acceso, doc.contenido);
                         renderTodo();
                     }
@@ -792,7 +923,25 @@ async function renderPapelera() {
     document.querySelectorAll('.delete-perm').forEach(btn => btn.addEventListener('click', async () => {
         const idx = parseInt(btn.dataset.idx);
         const item = trashDocsList[idx];
-        if (confirm(`¿Eliminar "${item.nombre}" permanentemente?`)) {
+        const confirmDelete = await Swal.fire({
+            title: '¿Eliminar permanentemente?',
+            text: `¿Eliminar "${item.nombre}" permanentemente? Esta acción no se puede deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            background: 'transparent',
+            customClass: {
+                popup: 'glass-swal-popup',
+                title: 'glass-swal-title',
+                htmlContainer: 'glass-swal-html',
+                confirmButton: 'glass-swal-confirm',
+                cancelButton: 'glass-swal-cancel',
+                icon: 'glass-swal-icon'
+            },
+            buttonsStyling: false
+        });
+        if (confirmDelete.isConfirmed) {
             await eliminarPermanente(item.id);
             renderTodo();
         }

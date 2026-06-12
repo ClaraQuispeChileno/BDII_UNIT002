@@ -509,6 +509,21 @@ async function abrirModalVisualizador(doc, propietario = 'Usuario', permiso = 'v
             const btnActivo = verDespues ? btnVer : btnGuardar;
             if (btnActivo) btnActivo.innerText = '⚡ Regenerando PDF...';
 
+            Swal.fire({
+                title: 'Guardando cambios...',
+                text: 'Regenerando PDF y actualizando en Supabase. Por favor espera.',
+                allowOutsideClick: false,
+                background: 'transparent',
+                customClass: {
+                    popup: 'glass-swal-popup',
+                    title: 'glass-swal-title',
+                    htmlContainer: 'glass-swal-html'
+                },
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             try {
                 const pdfBlob = await generarPdfBlob(nuevoHtml);
 
