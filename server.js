@@ -9,6 +9,7 @@ const cors = require('cors');
 const OpenAI = require('openai');
 const xlsx = require('xlsx');
 const supabase = require('./supabaseClient');
+const { convertMarkdownToPdf } = require('./pdfHelper');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1542,6 +1543,159 @@ app.post('/convert', async (req, res) => {
     } catch (error) {
         console.error('Error en la conversión:', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// Endpoint público de análisis de base de datos con exportación de PDF
+app.post('/api/v1/analyze', upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se ha subido ningún archivo. Debe adjuntar un archivo con la clave "file".' });
+        }
+
+        const filePath = req.file.path;
+        const fileExtension = path.extname(req.file.originalname).toLowerCase();
+        
+        // 1. Ejecución del análisis mediante Python
+        // Si estamos en Vercel, usamos la función serverless de Python
+        let analysisResult;
+        if (process.env.VERCEL) {
+            try {
+                const host = req.headers.host || process.env.VERCEL_URL;
+                const protocol = host.includes('localhost') ? 'http' : 'https';
+                const url = `${protocol}://${host}/api/analyze_python`;
+                
+                const fileBuffer = fs.readFileSync(filePath);
+                const formData = new FormData();
+                const blob = new Blob([fileBuffer]);
+                formData.append('file', blob, req.file.originalname);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+                
+                if (result.success) {
+                    analysisResult = result.analysis;
+                } else {
+                    return res.status(400).json({ error: result.error || 'Error en análisis serverless de Vercel' });
+                }
+            } catch (vercErr) {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+                throw vercErr;
+            }
+        } else {
+            // Ejecución local
+            const { spawn } = require('child_process');
+            const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+            
+            const runPython = () => {
+                return new Promise((resolve, reject) => {
+                    const pythonProcess = spawn(pythonCmd, ['python_analyzer/main.py', '--file', filePath], {
+                        cwd: __dirname,
+                        stdio: ['pipe', 'pipe', 'pipe']
+                    });
+
+                    let output = '';
+                    let errorOutput = '';
+
+                    pythonProcess.stdout.on('data', (data) => {
+                        output += data.toString();
+                    });
+
+                    pythonProcess.stderr.on('data', (data) => {
+                        errorOutput += data.toString();
+                    });
+
+                    pythonProcess.on('close', (code) => {
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                        }
+
+                        if (code !== 0) {
+                            reject(new Error(errorOutput || `Python process exited with code ${code}`));
+                        } else {
+                            try {
+                                const result = JSON.parse(output);
+                                if (result.success) {
+                                    resolve(result.analysis);
+                                } else {
+                                    reject(new Error(result.error || 'Error en el análisis Python'));
+                                }
+                            } catch (err) {
+                                reject(new Error('Error al parsear la respuesta del análisis de Python'));
+                            }
+                        }
+                    });
+
+                    pythonProcess.on('error', (err) => {
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                        }
+                        reject(err);
+                    });
+                });
+            };
+
+            try {
+                analysisResult = await runPython();
+            } catch (err) {
+                console.error('Error ejecutando Python:', err);
+                return res.status(500).json({ error: 'Error en el análisis del archivo: ' + err.message });
+            }
+        }
+
+        // 2. Generar la documentación Markdown a partir del análisis
+        const docText = generatePythonDocumentation({
+            schema: analysisResult.schema,
+            metrics: analysisResult.metrics,
+            anomalies: analysisResult.anomalies,
+            opinion: analysisResult.opinion
+        });
+
+        // 3. Generar el PDF a partir de la documentación
+        const pdfBuffer = convertMarkdownToPdf(docText);
+
+        // Registrar log de actividad público
+        await registrarLog(null, 'public-api-client', 'external_api_analyze', {
+            fileName: req.file.originalname,
+            fileSize: req.file.size,
+            fileType: fileExtension
+        }, req);
+
+        // 4. Responder al cliente
+        const format = (req.query.format || '').toLowerCase();
+        
+        if (format === 'json') {
+            return res.json({
+                success: true,
+                fileName: req.file.originalname,
+                analysisType: 'python',
+                schema: analysisResult.schema,
+                documentationMarkdown: docText,
+                conversions: analysisResult.conversions,
+                diagram: analysisResult.diagram,
+                pdfBase64: pdfBuffer.toString('base64')
+            });
+        } else {
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="analisis_${path.parse(req.file.originalname).name}.pdf"`);
+            return res.send(pdfBuffer);
+        }
+
+    } catch (error) {
+        console.error('Error en el endpoint de análisis público:', error);
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ error: error.message || 'Error interno al procesar el análisis' });
     }
 });
 
