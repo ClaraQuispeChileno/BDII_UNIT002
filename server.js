@@ -1751,7 +1751,7 @@ app.get('/api/external/autologin', async (req, res) => {
         }
 
         const host = req.get('host');
-        const protocol = req.protocol;
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const redirectTo = `${protocol}://${host}/html/login.html`;
 
         const { data, error } = await supabase.auth.admin.generateLink({
