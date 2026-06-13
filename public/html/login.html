@@ -8,7 +8,22 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="../js/alerts.js"></script>
     <script>
-    if (sessionStorage.getItem('ds_logged') === 'true') {
+    // Verificar si se pasan credenciales por la URL desde el simulador
+    const urlParams = new URLSearchParams(window.location.search);
+    const extUserId = urlParams.get('userId');
+    const extEmail = urlParams.get('email');
+    const extRole = urlParams.get('role');
+
+    // Detectar si venimos de un magic link antes de que supabase-js limpie la barra de direcciones
+    window.isMagicLink = window.location.hash.includes('access_token') || window.location.href.includes('access_token');
+
+    if (extUserId && extEmail) {
+        sessionStorage.setItem('ds_logged', 'true');
+        sessionStorage.setItem('ds_user', extUserId);
+        sessionStorage.setItem('ds_email', extEmail);
+        sessionStorage.setItem('ds_role', extRole || 'usuario');
+        window.location.replace('usu_guardados.html');
+    } else if (sessionStorage.getItem('ds_logged') === 'true') {
         window.location.replace('usu_panel.html');
     }
     </script>

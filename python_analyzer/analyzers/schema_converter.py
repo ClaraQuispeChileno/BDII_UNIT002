@@ -7,7 +7,6 @@ import json
 import yaml
 import pandas as pd
 from typing import Dict, List, Any
-import sqlglot
 
 class SchemaConverter:
     def __init__(self):
@@ -16,6 +15,45 @@ class SchemaConverter:
             'json', 'yaml', 'csv', 'prisma', 'graphql'
         ]
     
+    def _normalize_type(self, type_str: str) -> str:
+        if not type_str:
+            return 'STRING'
+        # Extraer el tipo base (ej: VARCHAR(100) -> VARCHAR, INT(11) -> INT)
+        base_type = str(type_str).split('(')[0].strip().upper()
+        
+        # Mapear sinónimos de tipos SQL/DDL comunes a nuestros tipos genéricos
+        synonyms = {
+            'INT': 'INTEGER',
+            'INTEGER': 'INTEGER',
+            'BIGINT': 'BIGINT',
+            'SMALLINT': 'SMALLINT',
+            'TINYINT': 'INTEGER',
+            'MEDIUMINT': 'INTEGER',
+            'VARCHAR': 'STRING',
+            'CHAR': 'STRING',
+            'CHARACTER': 'STRING',
+            'TEXT': 'TEXT',
+            'CLOB': 'TEXT',
+            'BLOB': 'TEXT',
+            'FLOAT': 'FLOAT',
+            'REAL': 'FLOAT',
+            'DOUBLE': 'DOUBLE',
+            'DOUBLE PRECISION': 'DOUBLE',
+            'DECIMAL': 'DECIMAL',
+            'NUMERIC': 'DECIMAL',
+            'NUMBER': 'DECIMAL',
+            'BOOLEAN': 'BOOLEAN',
+            'BOOL': 'BOOLEAN',
+            'DATETIME': 'DATETIME',
+            'TIMESTAMP': 'DATETIME',
+            'DATE': 'DATE',
+            'TIME': 'TIME',
+            'JSON': 'JSON',
+            'JSONB': 'JSON',
+            'UUID': 'STRING'
+        }
+        return synonyms.get(base_type, 'STRING')
+
     def generate_conversions(self, schema: Dict[str, Any]) -> Dict[str, Any]:
         """Genera conversiones a múltiples formatos"""
         conversions = {}
@@ -65,7 +103,7 @@ class SchemaConverter:
             # Columnas
             for i, col in enumerate(columns):
                 col_name = col['name']
-                col_type = self._map_type_to_mysql(col['type'])
+                col_type = self._map_type_to_mysql(col.get('type', 'STRING'))
                 nullable = "NOT NULL" if not col.get('nullable', True) else "NULL"
                 
                 auto_increment = ""
@@ -105,7 +143,7 @@ class SchemaConverter:
             # Columnas
             for i, col in enumerate(columns):
                 col_name = col['name']
-                col_type = self._map_type_to_postgres(col['type'])
+                col_type = self._map_type_to_postgres(col.get('type', 'STRING'))
                 nullable = "NOT NULL" if not col.get('nullable', True) else "NULL"
                 
                 # PostgreSQL auto-increment requiere SERIAL
@@ -147,7 +185,7 @@ class SchemaConverter:
             # Columnas
             for i, col in enumerate(columns):
                 col_name = col['name']
-                col_type = self._map_type_to_sqlite(col['type'])
+                col_type = self._map_type_to_sqlite(col.get('type', 'STRING'))
                 nullable = "NOT NULL" if not col.get('nullable', True) else "NULL"
                 
                 # SQLite AUTO_INCREMENT
@@ -185,7 +223,7 @@ class SchemaConverter:
             
             for col in columns:
                 col_name = col['name']
-                col_type = self._map_type_to_mongodb(col['type'])
+                col_type = self._map_type_to_mongodb(col.get('type', 'STRING'))
                 required = not col.get('nullable', True)
                 
                 field_def = {'type': col_type}
@@ -229,7 +267,7 @@ class SchemaConverter:
             
             for col in columns:
                 col_name = col['name']
-                col_type = self._map_type_to_json_schema(col['type'])
+                col_type = self._map_type_to_json_schema(col.get('type', 'STRING'))
                 required = not col.get('nullable', True)
                 
                 table_schema['properties'][col_name] = col_type
@@ -268,7 +306,7 @@ class SchemaConverter:
             
             for col in columns:
                 col_name = col['name']
-                col_type = self._map_type_to_prisma(col['type'])
+                col_type = self._map_type_to_prisma(col.get('type', 'STRING'))
                 
                 # Modificadores Prisma
                 modifiers = []
@@ -303,7 +341,6 @@ class SchemaConverter:
         for table in tables:
             table_name = table['name']
             columns = table.get('columns', [])
-            primary_keys = table.get('primaryKeys', [])
             
             # Capitalizar nombre del tipo
             type_name = table_name.capitalize() + "Type"
@@ -312,7 +349,7 @@ class SchemaConverter:
             
             for col in columns:
                 col_name = col['name']
-                col_type = self._map_type_to_graphql(col['type'])
+                col_type = self._map_type_to_graphql(col.get('type', 'STRING'))
                 
                 # Non-null si no es nullable
                 non_null = "!" if not col.get('nullable', True) else ""
@@ -352,7 +389,7 @@ class SchemaConverter:
             
             for col in columns:
                 col_name = col['name']
-                col_type = col['type']
+                col_type = col.get('type', 'STRING')
                 nullable = str(col.get('nullable', True)).lower()
                 primary_key = str(col.get('primaryKey', False)).lower()
                 
@@ -379,7 +416,7 @@ class SchemaConverter:
             for col in columns:
                 table_def['columns'].append({
                     'name': col['name'],
-                    'type': col['type'],
+                    'type': col.get('type', 'STRING'),
                     'nullable': col.get('nullable', True),
                     'primaryKey': col.get('primaryKey', False),
                     'autoIncrement': col.get('autoIncrement', False)
@@ -403,7 +440,8 @@ class SchemaConverter:
             # Formatear columnas como un objeto para que JSON Crack las muestre mejor
             cols_def = {}
             for col in columns:
-                props = [col['type']]
+                col_t = col.get('type', 'STRING')
+                props = [col_t]
                 if col.get('primaryKey'): props.append('PK')
                 if not col.get('nullable'): props.append('NOT NULL')
                 if col.get('autoIncrement'): props.append('AUTO')
@@ -427,7 +465,7 @@ class SchemaConverter:
     # Mapeos de tipos
     def _map_type_to_mysql(self, type_str: str) -> str:
         """Mapea tipo genérico a MySQL"""
-        type_str = type_str.upper()
+        type_str = self._normalize_type(type_str)
         
         mapping = {
             'INTEGER': 'INT',
@@ -449,7 +487,7 @@ class SchemaConverter:
     
     def _map_type_to_postgres(self, type_str: str) -> str:
         """Mapea tipo genérico a PostgreSQL"""
-        type_str = type_str.upper()
+        type_str = self._normalize_type(type_str)
         
         mapping = {
             'INTEGER': 'INTEGER',
@@ -471,7 +509,7 @@ class SchemaConverter:
     
     def _map_type_to_sqlite(self, type_str: str) -> str:
         """Mapea tipo genérico a SQLite"""
-        type_str = type_str.upper()
+        type_str = self._normalize_type(type_str)
         
         mapping = {
             'INTEGER': 'INTEGER',
@@ -493,7 +531,7 @@ class SchemaConverter:
     
     def _map_type_to_mongodb(self, type_str: str) -> str:
         """Mapea tipo genérico a MongoDB/Mongoose"""
-        type_str = type_str.upper()
+        type_str = self._normalize_type(type_str)
         
         mapping = {
             'INTEGER': 'Number',
@@ -515,7 +553,7 @@ class SchemaConverter:
     
     def _map_type_to_json_schema(self, type_str: str) -> Dict[str, str]:
         """Mapea tipo genérico a JSON Schema"""
-        type_str = type_str.upper()
+        type_str = self._normalize_type(type_str)
         
         mapping = {
             'INTEGER': {'type': 'integer'},
@@ -537,7 +575,7 @@ class SchemaConverter:
     
     def _map_type_to_prisma(self, type_str: str) -> str:
         """Mapea tipo genérico a Prisma"""
-        type_str = type_str.upper()
+        type_str = self._normalize_type(type_str)
         
         mapping = {
             'INTEGER': 'Int',
@@ -559,7 +597,7 @@ class SchemaConverter:
     
     def _map_type_to_graphql(self, type_str: str) -> str:
         """Mapea tipo genérico a GraphQL"""
-        type_str = type_str.upper()
+        type_str = self._normalize_type(type_str)
         
         mapping = {
             'INTEGER': 'Int',

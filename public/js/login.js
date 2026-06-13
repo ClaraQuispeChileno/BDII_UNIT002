@@ -5,6 +5,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhvb2hpcmN5Znplb2RvcWxna3l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjI2MDYsImV4cCI6MjA5NjE5ODYwNn0.uO3DKRrsXoLJekxIvr_sBTaZ1PKQctKZiqhpsD2NdnE';
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Escuchar cambios de autenticación para capturar Magic Link auto-login
+    supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+            // Solo actuar automáticamente si la URL viene con el hash de access_token de Supabase
+            if (window.isMagicLink || window.location.hash.includes('access_token')) {
+                sessionStorage.setItem('ds_logged', 'true');
+                sessionStorage.setItem('ds_user', session.user.id);
+                sessionStorage.setItem('ds_email', session.user.email);
+                
+                try {
+                    const { data: perfil, error: perfilError } = await supabase
+                        .from('perfiles')
+                        .select('rol')
+                        .eq('id', session.user.id)
+                        .single();
+                        
+                    const rol = perfil && !perfilError ? perfil.rol : 'usuario';
+                    sessionStorage.setItem('ds_role', rol);
+                } catch (err) {
+                    console.error('Error al obtener perfil:', err);
+                    sessionStorage.setItem('ds_role', 'usuario');
+                }
+                
+                window.location.href = 'usu_guardados.html';
+            }
+        }
+    });
+
     // Elementos del DOM
     const loginDiv = document.getElementById('loginFormContainer');
     const registerDiv = document.getElementById('registerFormContainer');

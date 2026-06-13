@@ -29,6 +29,39 @@ function convertMarkdownToPdf(markdownText) {
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i].trimEnd();
         
+        // Interceptar barra de progreso (estructura de corchetes con porcentaje final)
+        const barMatch = line.match(/^\[(.*)\]\s*(\d+[\s\d]*)\s*%/);
+        if (barMatch) {
+            const rawPct = barMatch[2].replace(/\s+/g, '');
+            const percentage = parseInt(rawPct) || 50;
+            
+            const barWidth = 100; // Ancho en mm
+            const barHeight = 5;  // Alto en mm
+            const barY = y + 2;
+            
+            checkPageHeight(barHeight + 8);
+            
+            // Fondo de la barra (gris claro)
+            doc.setFillColor(229, 231, 235);
+            doc.rect(margin, barY, barWidth, barHeight, "F");
+            
+            // Barra de progreso activa (azul)
+            doc.setFillColor(30, 58, 138);
+            const fillWidth = (percentage / 100) * barWidth;
+            if (fillWidth > 0) {
+                doc.rect(margin, barY, fillWidth, barHeight, "F");
+            }
+            
+            // Texto del porcentaje
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(30, 58, 138);
+            doc.text(`${percentage}%`, margin + barWidth + 4, barY + barHeight - 1);
+            
+            y += barHeight + 10;
+            continue;
+        }
+        
         // Handle empty line
         if (line.trim().length === 0) {
             y += 4;

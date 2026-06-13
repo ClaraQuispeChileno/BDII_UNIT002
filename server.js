@@ -21,7 +21,8 @@ const openai = new OpenAI({
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Función para registrar logs de actividad en Supabase
@@ -1699,19 +1700,205 @@ app.post('/api/v1/analyze', upload.single('file'), async (req, res) => {
     }
 });
 
+// ==========================================
+// ENDPOINTS PARA INTEGRACIÓN EXTERNA (SUPABASE)
+// ==========================================
+
+// Endpoint para login de clientes externos
+app.post('/api/external/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
+        }
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+
+        // Obtener perfil del usuario
+        const { data: perfil, error: perfilError } = await supabase
+            .from('perfiles')
+            .select('rol, nombres, apellidos')
+            .eq('id', data.user.id)
+            .single();
+
+        const userRol = perfil && !perfilError ? perfil.rol : 'usuario';
+        
+        await registrarLog(data.user.id, data.user.email, 'login_externo', { agent: req.headers['user-agent'] }, req);
+
+        res.json({
+            success: true,
+            user: {
+                id: data.user.id,
+                email: data.user.email,
+                rol: userRol,
+                nombres: perfil?.nombres || '',
+                apellidos: perfil?.apellidos || ''
+            }
+        });
+    } catch (error) {
+        console.error('Error en /api/external/login:', error);
+        res.status(400).json({ error: error.message || 'Error al iniciar sesión' });
+    }
+});
+
+// Endpoint para autologin (redirección con Magic Link)
+app.get('/api/external/autologin', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) {
+            return res.status(400).json({ error: 'Falta el parámetro email' });
+        }
+
+        const host = req.get('host');
+        const protocol = req.protocol;
+        const redirectTo = `${protocol}://${host}/html/login.html`;
+
+        const { data, error } = await supabase.auth.admin.generateLink({
+            type: 'magiclink',
+            email: email,
+            options: {
+                redirectTo: redirectTo
+            }
+        });
+
+        if (error) throw error;
+
+        // Redirigir al link de Supabase
+        res.redirect(data.properties.action_link);
+    } catch (error) {
+        console.error('Error en /api/external/autologin:', error);
+        res.redirect('/html/login.html?error=' + encodeURIComponent(error.message));
+    }
+});
+
+// Endpoint para registro de clientes externos
+app.post('/api/external/register', async (req, res) => {
+    try {
+        const { nombres, apellidos, email, password, tipo_uso, usuario } = req.body;
+        if (!nombres || !apellidos || !email || !password || !usuario) {
+            return res.status(400).json({ error: 'Todos los campos obligatorios deben ser completados' });
+        }
+
+        // Registrar en Supabase Auth
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { usuario, nombres, apellidos, tipo_uso: tipo_uso || 'Personal' } }
+        });
+        if (error) throw error;
+
+        if (data.user) {
+            // Insertar perfil en perfiles
+            const { error: perfilError } = await supabase
+                .from('perfiles')
+                .insert([{
+                    id: data.user.id,
+                    nombres,
+                    apellidos,
+                    tipo_uso: tipo_uso || 'Personal',
+                    rol: 'usuario',
+                    estado: 'activo'
+                }]);
+            if (perfilError) {
+                console.error('Error al insertar perfil:', perfilError);
+            }
+
+            await registrarLog(data.user.id, data.user.email, 'registro_externo', { tipo_uso }, req);
+        }
+
+        res.json({
+            success: true,
+            user: {
+                id: data.user?.id,
+                email: data.user?.email
+            }
+        });
+    } catch (error) {
+        console.error('Error en /api/external/register:', error);
+        res.status(400).json({ error: error.message || 'Error al registrar usuario' });
+    }
+});
+
+// Endpoint para guardar documentos desde clientes externos
+app.post('/api/external/documentos', async (req, res) => {
+    try {
+        const { userId, nombre, acceso, contenido, pdfBase64 } = req.body;
+        if (!userId || !nombre || !contenido) {
+            return res.status(400).json({ error: 'Faltan parámetros obligatorios (userId, nombre, contenido)' });
+        }
+
+        let pdfUrl = '';
+        if (pdfBase64) {
+            try {
+                const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+                const filePath = `user_${userId}/${Date.now()}_documentacion.pdf`;
+                
+                // Subir a Supabase Storage
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('documentos_pdf')
+                    .upload(filePath, pdfBuffer, {
+                        contentType: 'application/pdf',
+                        upsert: true
+                    });
+                    
+                if (!uploadError) {
+                    const { data: publicUrlData } = supabase.storage
+                        .from('documentos_pdf')
+                        .getPublicUrl(filePath);
+                    pdfUrl = publicUrlData.publicUrl;
+                } else {
+                    console.warn('Error al subir PDF a storage en API externa:', uploadError.message);
+                }
+            } catch (storageErr) {
+                console.error('Error procesando/subiendo PDF:', storageErr);
+            }
+        }
+
+        // Adjuntar la URL del PDF al contenido
+        const finalContenido = {
+            ...contenido,
+            pdfUrl: pdfUrl || contenido.pdfUrl || ''
+        };
+
+        // Insertar en la tabla documentos
+        const { data, error } = await supabase
+            .from('documentos')
+            .insert([{
+                usuario_id: userId,
+                nombre: nombre.trim(),
+                acceso: acceso || 'Personal',
+                contenido: finalContenido
+            }]);
+
+        if (error) throw error;
+
+        await registrarLog(userId, req.body.email || null, 'guardar_documento_externo', { nombreDocumento: nombre.trim() }, req);
+
+        res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('Error en /api/external/documentos:', error);
+        res.status(400).json({ error: error.message || 'Error al guardar el documento' });
+    }
+});
+
 // Manejo de errores de Multer
 app.use((error, req, res, next) => {
+    console.error('Error no manejado en el servidor:', error);
     if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ error: 'El archivo es demasiado grande. Máximo 10MB' });
         }
     }
 
-    if (error.message.includes('Tipo de archivo no permitido')) {
+    if (error.message && error.message.includes('Tipo de archivo no permitido')) {
         return res.status(400).json({ error: error.message });
     }
 
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: 'Error interno del servidor: ' + (error.message || error) });
 });
 
 // Iniciar servidor
