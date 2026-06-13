@@ -56,6 +56,10 @@ def analyze():
                 if not converted_code:
                     return jsonify({'success': False, 'error': f"Formato no soportado en Python: {target_format}"}), 400
                     
+                if isinstance(converted_code, dict):
+                    import json
+                    converted_code = json.dumps(converted_code, indent=2, ensure_ascii=False)
+                    
                 return jsonify({'success': True, 'convertedCode': converted_code})
             else:
                 return jsonify({'success': False, 'error': f"Acción '{action}' no soportada"}), 400
