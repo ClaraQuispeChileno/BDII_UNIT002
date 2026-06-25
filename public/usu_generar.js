@@ -1,6 +1,9 @@
 // Variables globales
 let selectedFile = null;
 let currentResults = null;
+let customOpenaiApiKey = '';
+let customOpenaiModel = 'gpt-4o';
+
 
 const SUPABASE_URL = 'https://xoohircyfzeodoqlgkyy.supabase.co';
 //const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhvb2hpcmN5Znplb2RvcWxna3l5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MjI2MDYsImV4cCI6MjA5NjE5ODYwNn0.uO3DKRrsXoLJekxIvr_sBTaZ1PKQctKZiqhpsD2NdnE';
@@ -55,7 +58,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Escuchar mensajes del Webview padre en la extensión de VS Code (Arquitectura Vercel/Nube)
     window.addEventListener('message', function(event) {
         if (event.data && event.data.type === 'load-file') {
-            const { content, filename } = event.data;
+            const { content, filename, apiKey, aiModel } = event.data;
+            
+            // Guardar configuración personalizada de IA
+            customOpenaiApiKey = apiKey || '';
+            customOpenaiModel = aiModel || 'gpt-4o';
+
             // Crear objeto File en memoria
             const file = new File([content], filename, { type: 'text/plain' });
             processFile(file);
@@ -310,7 +318,9 @@ async function analyzeFile() {
             method: 'POST',
             headers: {
                 'x-user-id': userId,
-                'x-user-email': userEmail
+                'x-user-email': userEmail,
+                'x-openai-api-key': customOpenaiApiKey,
+                'x-openai-model': customOpenaiModel
             },
             body: formData
         });

@@ -30,8 +30,13 @@ function activate(context) {
             const fileContent = fs.readFileSync(filePath, 'utf8');
             const fileName = path.basename(filePath);
 
-            // Abrir directamente el webview
-            openDashboardWebview(fileName, fileContent);
+            // Leer configuración nativa del espacio de trabajo
+            const config = vscode.workspace.getConfiguration('datascript');
+            const apiKey = config.get('openaiApiKey') || '';
+            const aiModel = config.get('aiModel') || 'gpt-4o';
+
+            // Abrir directamente el webview pasándole la configuración
+            openDashboardWebview(fileName, fileContent, apiKey, aiModel);
         } catch (err) {
             vscode.window.showErrorMessage(`Error al leer el archivo: ${err.message}`);
         }
@@ -40,7 +45,7 @@ function activate(context) {
     context.subscriptions.push(disposable);
 }
 
-function openDashboardWebview(fileName, fileContent) {
+function openDashboardWebview(fileName, fileContent, apiKey, aiModel) {
     // Crear el panel de Webview
     const panel = vscode.window.createWebviewPanel(
         'dbDocumenterDashboard',
@@ -73,21 +78,23 @@ function openDashboardWebview(fileName, fileContent) {
             </style>
         </head>
         <body>
-            <iframe id="dashboard-iframe" src="https://bdii-unit-002.vercel.app/html/usu_generar.html?vscode=true"></iframe>
+            <iframe id="dashboard-iframe" src="http://localhost:3000/html/usu_generar.html?vscode=true"></iframe>
             
             <script>
                 const iframe = document.getElementById('dashboard-iframe');
                 
-                // Esperar a que el iframe cargue para pasarle el archivo
+                // Esperar a que el iframe cargue para pasarle el archivo y la configuración
                 iframe.onload = () => {
                     const fileData = {
                         type: 'load-file',
                         content: ${JSON.stringify(fileContent)},
-                        filename: ${JSON.stringify(fileName)}
+                        filename: ${JSON.stringify(fileName)},
+                        apiKey: ${JSON.stringify(apiKey)},
+                        aiModel: ${JSON.stringify(aiModel)}
                     };
                     
                     // Enviar el archivo mediante postMessage al iframe de Vercel
-                    iframe.contentWindow.postMessage(fileData, 'https://bdii-unit-002.vercel.app');
+                    iframe.contentWindow.postMessage(fileData, 'https://localhost:3000');
                 };
             </script>
         </body>

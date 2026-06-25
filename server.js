@@ -781,12 +781,15 @@ function validateDatabaseContent(content, fileExtension) {
     return false;
 }
 
-// Generar documentación con OpenAI
-async function generateDocumentation(schema, dbType) {
+// Generar documentación con OpenAI (saca la API Key y modelo dinámicamente si los provee el cliente)
+async function generateDocumentation(schema, dbType, customApiKey, customModel) {
     try {
+        const apiKey = customApiKey || process.env.OPENAI_API_KEY;
+        const modelToUse = customModel || "gpt-4o-mini";
+
         // Verificar que la API Key esté configurada
-        if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'tu_clave_de_openai_aqui') {
-            throw new Error('API Key de OpenAI no configurada correctamente en el archivo .env');
+        if (!apiKey || apiKey === 'tu_clave_de_openai_aqui') {
+            throw new Error('API Key de OpenAI no configurada correctamente en el archivo .env ni proveída por el cliente.');
         }
 
         // Validar que haya estructuras antes de enviar a OpenAI
@@ -890,9 +893,16 @@ REGLAS ADICIONALES:
         
         console.log(`Enviando solicitud a OpenAI para esquema de tipo: ${dbType}...`);
         
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+        // Instanciar cliente OpenAI dinámico
+        const openaiClient = new OpenAI({ apiKey: apiKey });
+
+        const response = await openaiClient.chat.completions.create({
+            model: modelToUse,
             messages: [
+                {
+                    role: "system",
+                    content: "Eres un Administrador de Base de Datos (DBA) Senior. Tus respuestas deben ser sumamente técnicas, directas y concisas. Evita rodeos, saludos, introducciones amables o resúmenes de cierre. Genera directamente la estructura Markdown solicitada y optimiza al máximo el consumo de tokens respondiendo al grano."
+                },
                 { 
                     role: "user", 
                     content: prompt
@@ -1289,8 +1299,12 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             dbType = 'sql';
         }
         
+        // Obtener API Key y Modelo personalizados desde las cabeceras
+        const customApiKey = req.headers['x-openai-api-key'];
+        const customModel = req.headers['x-openai-model'];
+
         // Generar documentación con IA
-        const documentation = await generateDocumentation(schema, dbType);
+        const documentation = await generateDocumentation(schema, dbType, customApiKey, customModel);
 
         // Eliminar archivo temporal
         fs.unlinkSync(filePath);

@@ -76,6 +76,22 @@
         "view": "db-documenter-view",
         "contents": "### DataScript AI\n\nEste es tu panel local de auditoría y análisis de bases de datos.\n\nPara iniciar:\n1. Abre un archivo `.sql`, `.dbml` o `.json` en tu editor.\n2. Haz clic derecho y selecciona **Documentador BD: Analizar y Documentar Esquema**.\n\n[Abrir Panel General](command:db-documenter.open)"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "DataScript AI",
+      "properties": {
+        "datascript.openaiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Tu API Key de OpenAI para análisis avanzado y chat."
+        },
+        "datascript.aiModel": {
+          "type": "string",
+          "enum": ["gpt-4o", "gpt-3.5-turbo", "gpt-4-turbo"],
+          "default": "gpt-4o",
+          "description": "Modelo de IA a utilizar para las consultas de la base de datos."
+        }
+      }
+    }
   }
 }
