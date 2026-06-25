@@ -27,9 +27,45 @@ const errorSection = document.getElementById('errorSection');
 const errorMessage = document.getElementById('errorMessage');
 
 // Event Listeners
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     setupEventListeners();
     initPaywallUI();
+    
+    // Si estamos en VS Code, intentar cargar el archivo seleccionado por query param
+    const urlParams = new URLSearchParams(window.location.search);
+    const openFilePath = urlParams.get('openFile');
+    if (openFilePath) {
+        try {
+            const response = await fetch(`/api/local-file?path=${encodeURIComponent(openFilePath)}`);
+            const data = await response.json();
+            if (data.success) {
+                // Crear un objeto File
+                const file = new File([data.content], data.filename, { type: 'text/plain' });
+                processFile(file);
+                
+                // Ejecutar automáticamente el análisis de Python al cargar el archivo en VS Code
+                setTimeout(() => {
+                    analyzeFileWithPython();
+                }, 500);
+            }
+        } catch (err) {
+            console.error('Error de red cargando archivo local:', err);
+        }
+    }
+    // Escuchar mensajes del Webview padre en la extensión de VS Code (Arquitectura Vercel/Nube)
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'load-file') {
+            const { content, filename } = event.data;
+            // Crear objeto File en memoria
+            const file = new File([content], filename, { type: 'text/plain' });
+            processFile(file);
+            
+            // Ejecutar automáticamente el análisis de Python
+            setTimeout(() => {
+                analyzeFileWithPython();
+            }, 500);
+        }
+    });
 });
 
 function setupEventListeners() {

@@ -16,6 +16,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
+    // Bypassear inicio de sesión si estamos en modo VS Code
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('vscode') === 'true') {
+        sessionStorage.setItem('ds_logged', 'true');
+        sessionStorage.setItem('ds_user', 'vscode_user');
+        sessionStorage.setItem('ds_email', 'vscode@local');
+    }
+    
     // Si no hay sesión iniciada, expulsar al login inmediatamente
     if (!sessionStorage.getItem('ds_logged')) {
         window.location.replace('login.html');

@@ -1,4 +1,8 @@
+if (process.env.WORKSPACE_PATH) {
+    require('dotenv').config({ path: require('path').join(process.env.WORKSPACE_PATH, '.env') });
+}
 require('dotenv').config();
+
 
 const express = require('express');
 const multer = require('multer');
@@ -1547,6 +1551,26 @@ app.post('/convert', async (req, res) => {
     }
 });
 
+// Endpoint para leer un archivo local (usado principalmente por la extensión de VS Code)
+app.get('/api/local-file', (req, res) => {
+    const filePath = req.query.path;
+    if (!filePath) {
+        return res.status(400).json({ error: 'Falta el parámetro path' });
+    }
+    
+    try {
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Archivo no encontrado' });
+        }
+        
+        const content = fs.readFileSync(filePath, 'utf8');
+        const filename = path.basename(filePath);
+        res.json({ success: true, content, filename, path: filePath });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Endpoint público de análisis de base de datos con exportación de PDF
 app.post('/api/v1/analyze', upload.single('file'), async (req, res) => {
     try {
@@ -1902,9 +1926,16 @@ app.use((error, req, res, next) => {
 });
 
 // Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+    const actualPort = server.address().port;
+    console.log(`Servidor corriendo en http://localhost:${actualPort}`);
     console.log(`API Key de OpenAI configurada: ${process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY !== 'tu_clave_de_openai_aqui' ? 'Sí' : 'No'}`);
+    
+    // Si fue iniciado desde una extensión de VS Code mediante fork, enviar mensaje con el puerto
+    if (process.send) {
+        process.send({ event: 'server-started', port: actualPort });
+    }
 });
 
 module.exports = app;
+

@@ -1,8 +1,12 @@
 {
   "name": "database-documentation-system",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Sistema de documentación automática de bases de datos con IA",
-  "main": "server.js",
+  "publisher": "ClaraQuispe",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "main": "./extension.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
@@ -30,5 +34,48 @@
     "openai": "^4.20.1",
     "ws": "^8.20.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.75.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "db-documenter.open",
+        "title": "Documentador BD: Analizar y Documentar Esquema"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "db-documenter.open",
+          "when": "resourceExtname == .sql || resourceExtname == .dbml || resourceExtname == .json || resourceExtname == .yaml || resourceExtname == .yml",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "db-documenter-container",
+          "title": "Documentador BD",
+          "icon": "database-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "db-documenter-container": [
+        {
+          "id": "db-documenter-view",
+          "name": "DataScript AI"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "db-documenter-view",
+        "contents": "### DataScript AI\n\nEste es tu panel local de auditoría y análisis de bases de datos.\n\nPara iniciar:\n1. Abre un archivo `.sql`, `.dbml` o `.json` en tu editor.\n2. Haz clic derecho y selecciona **Documentador BD: Analizar y Documentar Esquema**.\n\n[Abrir Panel General](command:db-documenter.open)"
+      }
+    ]
   }
 }
