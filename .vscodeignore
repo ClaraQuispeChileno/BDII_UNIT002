@@ -6,7 +6,6 @@
 vercel.json
 server.js
 supabaseClient.js
-pdfHelper.js
 node_modules/
 public/
 python_analyzer/
