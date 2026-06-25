@@ -74,6 +74,7 @@ class SchemaConverter:
         # Generar formatos modernos
         conversions['prisma'] = self._convert_to_prisma(tables)
         conversions['graphql'] = self._convert_to_graphql(tables)
+        conversions['dbml'] = self._convert_to_dbml(tables)
         
         # Generar CSV/Excel
         conversions['csv'] = self._convert_to_csv(tables)
@@ -616,3 +617,43 @@ class SchemaConverter:
         }
         
         return mapping.get(type_str, 'String')
+
+    def _convert_to_dbml(self, tables: List[Dict[str, Any]]) -> str:
+        """Convierte a DBML (Database Markup Language)"""
+        dbml_lines = []
+        
+        for table in tables:
+            table_name = table['name']
+            columns = table.get('columns', [])
+            
+            dbml_lines.append(f"Table {table_name} {{")
+            for col in columns:
+                col_name = col['name']
+                col_type = col.get('type', 'varchar').lower()
+                
+                settings = []
+                if col.get('primaryKey'):
+                    settings.append("pk")
+                if col.get('autoIncrement'):
+                    settings.append("increment")
+                if not col.get('nullable', True):
+                    settings.append("not null")
+                
+                settings_str = f" [{', '.join(settings)}]" if settings else ""
+                dbml_lines.append(f"  {col_name} {col_type}{settings_str}")
+            dbml_lines.append("}")
+            dbml_lines.append("")
+            
+        # Generar relaciones / llaves foráneas
+        for table in tables:
+            table_name = table['name']
+            foreign_keys = table.get('foreignKeys', [])
+            for fk in foreign_keys:
+                if isinstance(fk, dict) and 'references' in fk:
+                    ref_table = fk['references'].get('table')
+                    ref_col = fk['references'].get('column')
+                    col_name = fk.get('column')
+                    if ref_table and ref_col and col_name:
+                        dbml_lines.append(f"Ref: {table_name}.{col_name} > {ref_table}.{ref_col}")
+                        
+        return "\n".join(dbml_lines)

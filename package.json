@@ -1,6 +1,6 @@
 {
   "name": "database-documentation-system",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Sistema de documentación automática de bases de datos con IA",
   "publisher": "ClaraQuispe",
   "engines": {
@@ -61,6 +61,13 @@
           "title": "Documentador BD",
           "icon": "database-icon.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "db-panel-container",
+          "title": "DB",
+          "icon": "database-icon.svg"
+        }
       ]
     },
     "views": {
@@ -68,6 +75,13 @@
         {
           "id": "db-documenter-view",
           "name": "DataScript AI"
+        }
+      ],
+      "db-panel-container": [
+        {
+          "type": "webview",
+          "id": "db-panel-view",
+          "name": "Menú de Base de Datos"
         }
       ]
     },

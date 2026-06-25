@@ -224,8 +224,14 @@ def main():
             fmt = target_format
             if fmt == 'postgresql':
                 fmt = 'postgres'
+            elif fmt in ['mongodb', 'nosql']:
+                fmt = 'mongodb'
             elif fmt == 'json_schema':
                 fmt = 'json_schema'
+            elif fmt == 'json_crack':
+                fmt = 'json_crack'
+            elif fmt == 'dbml':
+                fmt = 'dbml'
                 
             converted_code = formats.get(fmt)
             if not converted_code:
