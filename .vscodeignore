@@ -8,7 +8,6 @@ server.js
 supabaseClient.js
 node_modules/
 public/
-python_analyzer/
 api/
 **/*.log
 **/*.db
@@ -21,4 +20,3 @@ api/
 **/*.yaml
 **/*.yml
 .skill/
-

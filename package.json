@@ -1,6 +1,6 @@
 {
   "name": "database-documentation-system",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Sistema de documentación automática de bases de datos con IA",
   "publisher": "ClaraQuispe",
   "engines": {
