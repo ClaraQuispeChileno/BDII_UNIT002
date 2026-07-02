@@ -1,0 +1,594 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "DataScript AI - API Pública",
+    "description": "Especificación y documentación interactiva de las APIs públicas de integración para el Sistema de Documentación de Bases de Datos con IA.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Servidor actual"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Análisis y Generación de Documentación",
+      "description": "Endpoints para auditar esquemas de bases de datos y generar documentación inteligente."
+    },
+    {
+      "name": "Herramientas del Motor de Python",
+      "description": "Procesamiento local, generación de datos falsos (mock data) y conversión de dialectos de bases de datos."
+    },
+    {
+      "name": "Autenticación y Clientes Externos",
+      "description": "Módulos de registro, login rápido, Magic Links y almacenamiento persistente de auditorías."
+    }
+  ],
+  "paths": {
+    "/api/v1/analyze": {
+      "post": {
+        "tags": ["Análisis y Generación de Documentación"],
+        "summary": "Analizar base de datos (V1 Público)",
+        "description": "Sube un archivo de base de datos (.sql, .json, .dbml, .csv, .xlsx, .txt) para analizar su estructura, normalización y generar documentación avanzada con IA.",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Formato de respuesta deseado. Por defecto descarga el PDF de forma directa.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["pdf", "json"],
+              "default": "pdf"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "El archivo de base de datos a analizar."
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Análisis exitoso. Si format=json, devuelve un objeto detallado; de lo contrario, devuelve un archivo binario PDF.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "fileName": {
+                      "type": "string",
+                      "example": "base_datos.sql"
+                    },
+                    "analysisType": {
+                      "type": "string",
+                      "example": "python"
+                    },
+                    "schema": {
+                      "type": "object",
+                      "description": "Estructura de tablas y campos detectados."
+                    },
+                    "documentationMarkdown": {
+                      "type": "string",
+                      "description": "Documentación completa en formato Markdown.",
+                      "example": "# Documentación Técnica..."
+                    },
+                    "conversions": {
+                      "type": "object",
+                      "description": "Código del esquema convertido a otros dialectos."
+                    },
+                    "diagram": {
+                      "type": "string",
+                      "description": "Diagrama del esquema (si aplica)."
+                    },
+                    "pdfBase64": {
+                      "type": "string",
+                      "description": "El PDF del análisis codificado en Base64."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Petición inválida (ej. tipo de archivo no soportado o archivo faltante)."
+          },
+          "500": {
+            "description": "Error interno al procesar el análisis."
+          }
+        }
+      }
+    },
+    "/analyze-python": {
+      "post": {
+        "tags": ["Herramientas del Motor de Python"],
+        "summary": "Analizar esquema con Python (Motor local)",
+        "description": "Sube un archivo de esquema y realiza una auditoría estructural rápida usando el script de Python sin consultar IA externa.",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "ID del usuario (opcional).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-email",
+            "in": "header",
+            "description": "Email del usuario (opcional).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Archivo de base de datos."
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Análisis rápido completado con éxito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "schema": {
+                      "type": "object"
+                    },
+                    "documentation": {
+                      "type": "string"
+                    },
+                    "conversions": {
+                      "type": "object"
+                    },
+                    "diagram": {
+                      "type": "string"
+                    },
+                    "analysisType": {
+                      "type": "string",
+                      "example": "python"
+                    },
+                    "fileName": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/generate-data": {
+      "post": {
+        "tags": ["Herramientas del Motor de Python"],
+        "summary": "Generar datos de prueba (Mock Data)",
+        "description": "Recibe un esquema de base de datos en formato JSON y devuelve datos ficticios realistas generados por el motor de Python.",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-email",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schema": {
+                    "type": "object",
+                    "description": "El esquema de base de datos (con tablas y columnas)."
+                  },
+                  "config": {
+                    "type": "object",
+                    "description": "Configuraciones opcionales como número de filas a generar.",
+                    "properties": {
+                      "rows": {
+                        "type": "integer",
+                        "default": 10
+                      }
+                    }
+                  }
+                },
+                "required": ["schema"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Datos de prueba generados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Objeto con datos ficticios para cada tabla."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/convert": {
+      "post": {
+        "tags": ["Herramientas del Motor de Python"],
+        "summary": "Convertir formato de esquema",
+        "description": "Convierte un esquema de base de datos a un dialecto objetivo (PostgreSQL, MySQL, SQLite, JSON, etc.) mediante el motor de Python.",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-email",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "schema": {
+                    "type": "object"
+                  },
+                  "targetFormat": {
+                    "type": "string",
+                    "description": "El formato objetivo.",
+                    "enum": ["postgres", "mysql", "sqlite", "json", "dbml"],
+                    "example": "postgres"
+                  }
+                },
+                "required": ["schema", "targetFormat"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversión completada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "convertedCode": {
+                      "type": "string",
+                      "description": "El código del esquema en el nuevo formato."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/external/login": {
+      "post": {
+        "tags": ["Autenticación y Clientes Externos"],
+        "summary": "Iniciar sesión (Cliente externo)",
+        "description": "Autentica credenciales en Supabase Auth y devuelve los detalles del perfil del usuario.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "usuario@ejemplo.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "miPassword123"
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inicio de sesión correcto.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "u123-id-UUID"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "usuario@ejemplo.com"
+                        },
+                        "rol": {
+                          "type": "string",
+                          "example": "usuario"
+                        },
+                        "nombres": {
+                          "type": "string",
+                          "example": "Clara"
+                        },
+                        "apellidos": {
+                          "type": "string",
+                          "example": "Quispe"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Credenciales inválidas o incompletas."
+          }
+        }
+      }
+    },
+    "/api/external/register": {
+      "post": {
+        "tags": ["Autenticación y Clientes Externos"],
+        "summary": "Registrar usuario (Cliente externo)",
+        "description": "Crea una cuenta en Supabase Auth e inicializa el perfil en la base de datos.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nombres": {
+                    "type": "string",
+                    "example": "Clara"
+                  },
+                  "apellidos": {
+                    "type": "string",
+                    "example": "Quispe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "usuario@ejemplo.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "miPassword123"
+                  },
+                  "usuario": {
+                    "type": "string",
+                    "example": "claraq"
+                  },
+                  "tipo_uso": {
+                    "type": "string",
+                    "enum": ["Personal", "Educativo", "Trabajo"],
+                    "default": "Personal"
+                  }
+                },
+                "required": ["nombres", "apellidos", "email", "password", "usuario"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registro exitoso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "u123-id-UUID"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "usuario@ejemplo.com"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error al registrar (ej. el correo ya existe)."
+          }
+        }
+      }
+    },
+    "/api/external/documentos": {
+      "post": {
+        "tags": ["Autenticación y Clientes Externos"],
+        "summary": "Guardar documento",
+        "description": "Guarda un análisis y esquema documentado para un usuario. Opcionalmente sube el PDF generado enviándolo en Base64.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "description": "ID del usuario en Supabase.",
+                    "example": "u123-id-UUID"
+                  },
+                  "nombre": {
+                    "type": "string",
+                    "description": "Nombre que tendrá el documento guardado.",
+                    "example": "Documentación Tienda Virtual"
+                  },
+                  "acceso": {
+                    "type": "string",
+                    "enum": ["Personal", "Compartido", "Público"],
+                    "default": "Personal"
+                  },
+                  "contenido": {
+                    "type": "object",
+                    "description": "El objeto JSON que contiene los datos del análisis, esquema y diagramas."
+                  },
+                  "pdfBase64": {
+                    "type": "string",
+                    "description": "El PDF codificado en Base64 para guardarlo en Supabase Storage (opcional)."
+                  }
+                },
+                "required": ["userId", "nombre", "contenido"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Documento guardado con éxito.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "description": "El registro insertado en la base de datos."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parámetros incompletos o error al guardar."
+          }
+        }
+      }
+    },
+    "/api/external/autologin": {
+      "get": {
+        "tags": ["Autenticación y Clientes Externos"],
+        "summary": "Autologin con Magic Link",
+        "description": "Genera y redirige automáticamente al usuario mediante un Magic Link de inicio de sesión rápido en la web.",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "description": "El correo del usuario para autenticar.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirección exitosa hacia la acción de Supabase / panel de login."
+          },
+          "400": {
+            "description": "Falta el parámetro email o error de generación."
+          }
+        }
+      }
+    }
+  }
+}

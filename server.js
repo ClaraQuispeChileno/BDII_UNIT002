@@ -938,6 +938,12 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Ruta para la documentación interactiva de la API
+app.get('/api-docs', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'html', 'docs.html'));
+});
+
+
 // Endpoint de prueba para API Key de OpenAI
 app.get('/test-openai', async (req, res) => {
     try {
