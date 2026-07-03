@@ -23,6 +23,22 @@
       "category": "Security",
       "techTrigger": [".sql", ".json", ".yaml", ".yml"],
       "files": ["SKILL.md"]
+    },
+    {
+      "id": "db-migrations",
+      "name": "Database Migration Assistant",
+      "description": "Guía experta para diseñar scripts de migración seguros, evitar pérdidas de datos en producción y manejar rollbacks.",
+      "category": "Design & Operations",
+      "techTrigger": [".sql", ".js", ".ts", ".json"],
+      "files": ["SKILL.md"]
+    },
+    {
+      "id": "orm-best-practices",
+      "name": "ORM Performance & Best Practices",
+      "description": "Evita problemas comunes como consultas N+1, mala gestión de relaciones y problemas de pool de conexiones usando Prisma, Drizzle o Sequelize.",
+      "category": "Performance & Design",
+      "techTrigger": [".js", ".ts", ".prisma", ".json"],
+      "files": ["SKILL.md"]
     }
   ]
 }

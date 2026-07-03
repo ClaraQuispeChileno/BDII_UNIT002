@@ -197,7 +197,7 @@ function closeModal() {
 
 // Copiar comando al portapapeles
 function copyInstallCommand(skillId, buttonElement) {
-    const command = `npx db-skills install ${skillId}`;
+    const command = `npx db-skills-ai install ${skillId}`;
     navigator.clipboard.writeText(command).then(() => {
         const originalText = buttonElement.innerHTML;
         buttonElement.innerHTML = `<i class="fa-solid fa-check"></i> ¡Copiado!`;

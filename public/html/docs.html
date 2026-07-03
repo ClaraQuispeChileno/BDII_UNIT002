@@ -10,6 +10,8 @@
     
     <!-- Swagger UI CSS from CDN -->
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.css">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         /* Estilos base Premium con tema oscuro de alta legibilidad */
@@ -279,10 +281,61 @@
             margin: 0 auto;
             padding: 20px 20px 80px 20px;
         }
+
+        /* Barra de navegación superior */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a5b4fc 0%, #d8b4fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-main);
+        }
     </style>
 </head>
 
 <body>
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <i class="fa-solid fa-brain-circuit"></i> DataScript AI
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Analizador</a>
+            <a href="/api-docs" class="nav-link active">API Docs</a>
+            <a href="/html/usu_skills.html" class="nav-link">AI Skills</a>
+        </div>
+    </nav>
+
     <div class="api-header">
         <h1 class="api-title">Centro para desarrolladores y referencia de API</h1>
         <p class="api-subtitle">Prueba e integra de forma interactiva la potencia de nuestro motor de documentación, auditoría de base de datos con Python y generación de IA en tus propios servicios.</p>
