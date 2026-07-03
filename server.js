@@ -943,6 +943,21 @@ app.get('/api-docs', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'html', 'docs.html'));
 });
 
+// Endpoint para obtener el manifiesto de skills de IA
+app.get('/api/skills', (req, res) => {
+    try {
+        const manifestPath = path.join(__dirname, 'public', 'skills-registry', 'manifest.json');
+        if (!fs.existsSync(manifestPath)) {
+            return res.status(404).json({ error: 'Manifiesto de skills no encontrado' });
+        }
+        const data = fs.readFileSync(manifestPath, 'utf8');
+        res.json(JSON.parse(data));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 
 // Endpoint de prueba para API Key de OpenAI
 app.get('/test-openai', async (req, res) => {

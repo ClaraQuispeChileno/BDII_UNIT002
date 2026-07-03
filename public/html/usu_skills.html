@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataScript AI - AI Skills Hub</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MarkedJS for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-main: #0c0e17;
+            --bg-card: rgba(20, 24, 46, 0.95);
+            --border-glow: rgba(99, 102, 241, 0.25);
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #a855f7;
+            --text-main: #f8fafc;
+            --text-muted: #cbd5e1;
+            --accent: #10b981;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 45%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        /* Barra de navegación superior */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a5b4fc 0%, #d8b4fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-main);
+        }
+
+        /* Contenedor del encabezado */
+        .header-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 50px 20px 30px 20px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 15px 0;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            max-width: 750px;
+            margin: 0 auto 30px auto;
+            line-height: 1.6;
+        }
+
+        /* Barra de búsqueda y filtros */
+        .controls-section {
+            max-width: 1200px;
+            margin: 0 auto 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .search-container {
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 14px 20px 14px 45px;
+            color: #ffffff;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+            outline: none;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-param);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 8px 18px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Grid de Skills */
+        .skills-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 80px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .skill-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skill-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.25);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .category-badge {
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #d8b4fe;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+
+        .skill-icon {
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+
+        .skill-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            color: #ffffff;
+        }
+
+        .skill-desc {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            flex-grow: 1;
+        }
+
+        .tech-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+
+        .tech-tag {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-param);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: #ffffff;
+        }
+
+        /* Modal / Visualizador de Skill */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 24px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: #111322;
+            z-index: 10;
+        }
+
+        .modal-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin: 0;
+            color: #ffffff;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .close-btn:hover {
+            color: #ffffff;
+        }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .modal-body h1, .modal-body h2, .modal-body h3 {
+            color: #ffffff;
+            margin-top: 25px;
+        }
+
+        .modal-body code {
+            background: #080a14;
+            color: var(--accent);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .modal-body pre {
+            background: #080a14;
+            padding: 20px;
+            border-radius: 12px;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-body pre code {
+            background: transparent;
+            padding: 0;
+            color: #34d399;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            background: #111322;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        /* Banner de comando de terminal */
+        .install-box {
+            background: #080a14;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+            color: #a7f3d0;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: color 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="nav-logo">
+            <i class="fa-solid fa-brain-circuit"></i> DataScript AI
+        </a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Analizador</a>
+            <a href="/api-docs" class="nav-link">API Docs</a>
+            <a href="/html/usu_skills.html" class="nav-link active">AI Skills</a>
+        </div>
+    </nav>
+
+    <div class="header-section">
+        <h1 class="title">AI Skills Hub</h1>
+        <p class="subtitle">Descarga e integra reglas expertas en tus propios agentes de IA. Equipa a tu editor de código o terminal para auditar y diseñar bases de datos siguiendo los estándares más estrictos.</p>
+        
+        <!-- Banner del comando general -->
+        <div style="max-width: 600px; margin: 0 auto 30px auto;">
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 8px;">Instala cualquier skill automáticamente vía CLI:</p>
+            <div class="install-box">
+                <span id="cli-cmd">npx db-skills install [nombre-del-skill]</span>
+                <button class="copy-btn" onclick="copyGeneralCLI()" title="Copiar Comando General"><i class="fa-regular fa-copy"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-section">
+        <div class="search-container">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" class="search-input" id="search-input" placeholder="Buscar skills por nombre o descripción...">
+        </div>
+        <div class="filter-buttons" id="filter-buttons">
+            <button class="filter-btn active" data-filter="all">Todos</button>
+            <button class="filter-btn" data-filter="design">Diseño</button>
+            <button class="filter-btn" data-filter="performance">Rendimiento</button>
+            <button class="filter-btn" data-filter="security">Seguridad</button>
+        </div>
+    </div>
+
+    <div class="skills-grid" id="skills-grid">
+        <!-- Renderizado dinámico de tarjetas -->
+    </div>
+
+    <!-- Modal para previsualización de Markdown -->
+    <div class="modal" id="skill-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Detalles del Skill</h2>
+                <button class="close-btn" id="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Contenido cargado dinámicamente -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="modal-close-footer">Cerrar</button>
+                <button class="btn btn-primary" id="modal-download-btn"><i class="fa-solid fa-download"></i> Descargar .md</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/usu_skills.js" type="module"></script>
+    <script>
+        function copyGeneralCLI() {
+            const cmd = document.getElementById('cli-cmd').textContent;
+            navigator.clipboard.writeText(cmd);
+            const btn = document.querySelector('.install-box .copy-btn');
+            btn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981"></i>';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

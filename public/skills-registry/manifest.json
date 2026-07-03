@@ -1,0 +1,28 @@
+{
+  "skills": [
+    {
+      "id": "db-indexing",
+      "name": "Database Indexing & Keys Auditor",
+      "description": "Audita llaves primarias, foráneas e identifica columnas críticas que necesitan indexación para optimizar búsquedas.",
+      "category": "Design & Performance",
+      "techTrigger": [".sql", ".dbml", ".prisma", ".json"],
+      "files": ["SKILL.md"]
+    },
+    {
+      "id": "sql-optimization",
+      "name": "SQL Query Optimization Expert",
+      "description": "Reglas avanzadas para reescribir consultas SQL lentas, detectar malas prácticas y optimizar con EXPLAIN ANALYZE.",
+      "category": "Performance",
+      "techTrigger": [".sql", ".js", ".ts", ".py"],
+      "files": ["SKILL.md"]
+    },
+    {
+      "id": "schema-security",
+      "name": "Database Security & Hardening",
+      "description": "Evalúa el esquema contra riesgos de inyección SQL, falta de encriptación y debilidades en control de accesos.",
+      "category": "Security",
+      "techTrigger": [".sql", ".json", ".yaml", ".yml"],
+      "files": ["SKILL.md"]
+    }
+  ]
+}
